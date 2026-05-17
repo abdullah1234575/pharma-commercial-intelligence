@@ -37,7 +37,7 @@ export function BrandMark({ variant = "navbar", compact = false, logoSrc = "/syn
             Synaptic Group
           </p>
           <p className="truncate text-xs font-medium uppercase tracking-[0.1em] text-[rgb(var(--muted))]">
-            Powered by Abdullah Alshawadfy
+            Abdullah Alshawadfy
           </p>
         </div>
       ) : null}
