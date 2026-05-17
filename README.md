@@ -1,6 +1,21 @@
-# Pharma Commercial Intelligence
+# Pharma Commercial Intelligence | Synaptic Group
 
-Executive-level pharmaceutical commercial dashboard built with Next.js, React, Tailwind CSS, Recharts, and a Supabase/PostgreSQL-ready data layer.
+Multi-tenant SaaS analytics platform for pharmaceutical commercial intelligence.
+
+## Capabilities
+
+- Supabase Auth-ready login/signup
+- Tenant workspace model with RBAC roles: `owner`, `admin`, `analyst`, `viewer`
+- Row-level security schema for private tenant data
+- Excel/CSV upload with drag and drop, progress, upload history, validation, and retry
+- Multi-sheet processing through `xlsx`
+- AI-assisted schema mapping for varied company column names
+- Dynamic KPI generation from uploaded rows only
+- Dynamic filters generated from tenant data
+- Adaptive charts for sales trends, targets, product ranking, territory performance, reps, market intelligence, forecasting, and customer insights
+- AI-style insight engine for growth drivers, anomalies, territory risks, brand performance, and rep effectiveness
+- Saved dashboard configs, CSV export, PDF print/export, and live refresh controls
+- Responsive executive UI with dark/light mode
 
 ## Run Locally
 
@@ -11,33 +26,47 @@ npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
-## What Is Included
+Login/signup page: [http://127.0.0.1:3000/login](http://127.0.0.1:3000/login).
 
-- Responsive executive dashboard with light/dark mode
-- Sidebar navigation and sticky executive toolbar
-- Interactive slicers for year, quarter, month, region, territory, product line, brand, medical rep, manager, customer type, and channel
-- KPI cards for sales, growth, market share, achievement, forecast accuracy, margin, productivity, Rx growth, IMS growth, YTD sales, MAT growth, and more
-- Recharts visuals: line, area, bar, composed, donut, scatter, treemap, heatmap-style territory grid, and waterfall-style variance view
-- AI-style insights, performance alerts, search shell, export controls, RBAC control, and live refresh timestamp
-- API-ready route at `/api/commercial`
+## Supabase Setup
 
-## Data Architecture
-
-Sample data is generated in `lib/pharma-data.ts` as commercial fact records with:
-
-- Date hierarchy: `year`, `quarter`, `month`, `monthIndex`
-- Commercial geography: `region`, `territory`
-- Product dimensions: `productLine`, `brand`
-- Field force dimensions: `medicalRep`, `manager`
-- Customer/channel dimensions: `customerType`, `channel`
-- Measures: `sales`, `target`, `forecast`, `units`, `customers`, `activeCustomers`, `calls`, `plannedCalls`, `prescriptions`, `imsSales`, `marketSize`, `competitorA`, `competitorB`, `competitorC`, `margin`
-
-`lib/supabase.ts` includes a PostgreSQL table schema for replacing the sample generator with Supabase-backed facts.
-
-## API Example
+1. Create a Supabase project.
+2. Run [supabase/schema.sql](</C:/Users/Abdullah Alshawadfy/Documents/Pharma Commercial Intelligence and Analytics/supabase/schema.sql>) in the Supabase SQL editor.
+3. Add these Vercel/local environment variables:
 
 ```text
-/api/commercial?year=2026&region=North&brand=Cardiovex
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-The endpoint returns filtered KPIs, chart series, alerts, and insights in a structure ready for a BI data service or Supabase query adapter.
+The schema creates:
+
+- `users`
+- `workspaces`
+- `workspace_members`
+- `uploads`
+- `processed_data`
+- `ai_insights`
+- `dashboard_configs`
+
+RLS policies isolate every tenant by `workspace_id`.
+
+## Data Flow
+
+1. User signs up through Supabase Auth.
+2. Signup trigger creates a private workspace and owner membership.
+3. User uploads CSV/XLS/XLSX files.
+4. Mapping engine detects commercial fields, including sales, products, dates, territories, reps, managers, targets, forecast, market size, units, and margin.
+5. Processed rows are stored locally for preview and persisted to Supabase when auth is configured.
+6. KPI cards, filters, charts, alerts, and insights are generated from `processed_data`.
+
+## Key Files
+
+- Dashboard: `components/dashboard.tsx`
+- Upload UI: `components/upload/upload-center.tsx`
+- Schema mapping: `lib/data-mapping.ts`
+- Dynamic analytics: `lib/analytics.ts`
+- Supabase client: `lib/supabase.ts`
+- Supabase persistence: `lib/persistence.ts`
+- Login/signup: `app/login/login-client.tsx`
+- RLS schema: `supabase/schema.sql`

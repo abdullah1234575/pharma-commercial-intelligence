@@ -52,3 +52,38 @@ export type KpiMetric = {
   status: "positive" | "negative" | "neutral" | "warning";
   detail: string;
 };
+
+export type FilterOptions = Record<keyof DashboardFilters, string[]>;
+
+export type ColumnMapping = Partial<Record<keyof PharmaRecord, string>> & {
+  confidence: number;
+  unmappedColumns: string[];
+};
+
+export type ParsedSheet = {
+  fileName: string;
+  sheetName: string;
+  templateType?: "sales" | "market" | "forecasting";
+  rowCount: number;
+  mapping: ColumnMapping;
+  records: PharmaRecord[];
+  warnings: string[];
+  errors: string[];
+};
+
+export type UploadHistoryItem = {
+  id: string;
+  fileName: string;
+  sheets: number;
+  rows: number;
+  status: "processed" | "failed";
+  createdAt: string;
+  message: string;
+};
+
+export type TenantSession = {
+  userId: string;
+  email: string;
+  workspaceId: string;
+  role: "owner" | "admin" | "analyst" | "viewer";
+};

@@ -30,8 +30,10 @@ import { Topbar } from "@/components/layout/topbar";
 import { FilterPanel } from "@/components/ui/filter-panel";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { SectionShell } from "@/components/ui/section-shell";
-import { buildDashboardModel, defaultFilters } from "@/lib/analytics";
-import type { DashboardFilters } from "@/types/dashboard";
+import { UploadCenter } from "@/components/upload/upload-center";
+import { buildDashboardModel, buildFilterOptions, defaultFilters } from "@/lib/analytics";
+import { persistUploadToSupabase } from "@/lib/persistence";
+import type { DashboardFilters, ParsedSheet, PharmaRecord, UploadHistoryItem } from "@/types/dashboard";
 
 const chartColors = ["#0f8ba8", "#49c58d", "#f5a524", "#5267df", "#e45757", "#1bb7b4"];
 
@@ -42,14 +44,60 @@ export function PharmaDashboard() {
   const [filters, setFilters] = useState<DashboardFilters>(defaultFilters);
   const [darkMode, setDarkMode] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
-  const model = useMemo(() => buildDashboardModel(filters), [filters]);
+  const [records, setRecords] = useState<PharmaRecord[]>([]);
+  const [uploadHistory, setUploadHistory] = useState<UploadHistoryItem[]>([]);
+  const model = useMemo(() => buildDashboardModel(filters, records), [filters, records]);
+  const filterOptions = useMemo(() => buildFilterOptions(records), [records]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
+  useEffect(() => {
+    const storedRecords = window.localStorage.getItem("pci:processed-records");
+    const storedHistory = window.localStorage.getItem("pci:upload-history");
+    if (storedRecords) setRecords(JSON.parse(storedRecords) as PharmaRecord[]);
+    if (storedHistory) setUploadHistory(JSON.parse(storedHistory) as UploadHistoryItem[]);
+  }, []);
+
   function updateFilter(key: keyof DashboardFilters, value: string) {
     setFilters((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleProcessedUpload(nextRecords: PharmaRecord[], _sheets: ParsedSheet[], item: UploadHistoryItem) {
+    const mergedRecords = nextRecords.length ? [...records, ...nextRecords] : records;
+    const mergedHistory = [item, ...uploadHistory];
+    setRecords(mergedRecords);
+    setUploadHistory(mergedHistory);
+    window.localStorage.setItem("pci:processed-records", JSON.stringify(mergedRecords));
+    window.localStorage.setItem("pci:upload-history", JSON.stringify(mergedHistory));
+    setFilters(defaultFilters);
+    void persistUploadToSupabase(item, nextRecords);
+  }
+
+  function exportExcel() {
+    const header = Object.keys(records[0] ?? {});
+    const csv = [
+      header.join(","),
+      ...records.map((record) =>
+        header.map((key) => JSON.stringify(record[key as keyof PharmaRecord] ?? "")).join(",")
+      )
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "pharma-commercial-intelligence-export.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function saveDashboard() {
+    const configs = JSON.parse(window.localStorage.getItem("pci:dashboard-configs") ?? "[]") as unknown[];
+    window.localStorage.setItem(
+      "pci:dashboard-configs",
+      JSON.stringify([{ id: crypto.randomUUID(), name: "Executive Dashboard", filters, createdAt: new Date().toISOString() }, ...configs])
+    );
   }
 
   return (
@@ -57,9 +105,24 @@ export function PharmaDashboard() {
       <div className="flex">
         <Sidebar />
         <div className="min-w-0 flex-1">
-          <Topbar darkMode={darkMode} onToggleDark={() => setDarkMode((value) => !value)} onRefresh={() => setLastRefresh(new Date())} lastRefresh={lastRefresh} />
+          <Topbar
+            darkMode={darkMode}
+            onToggleDark={() => setDarkMode((value) => !value)}
+            onRefresh={() => setLastRefresh(new Date())}
+            lastRefresh={lastRefresh}
+            onExportExcel={exportExcel}
+            onExportPdf={() => window.print()}
+            onSaveDashboard={saveDashboard}
+          />
           <div className="space-y-8 p-4 md:p-6">
-            <FilterPanel filters={filters} onChange={updateFilter} onReset={() => setFilters(defaultFilters)} />
+            <UploadCenter history={uploadHistory} onProcessed={handleProcessedUpload} />
+            <FilterPanel filters={filters} options={filterOptions} onChange={updateFilter} onReset={() => setFilters(defaultFilters)} />
+
+            {!records.length ? (
+              <section className="rounded-lg border border-ocean/25 bg-ocean/10 p-4 text-sm leading-6 text-[rgb(var(--text))]">
+                <strong>Dynamic workspace is ready.</strong> Upload tenant Excel or CSV data to activate KPIs, filters, visualizations, insights, exports, and saved dashboard configuration. No demo KPI values are used.
+              </section>
+            ) : null}
 
             <SectionShell id="summary" title="Executive Summary" subtitle="Leadership cockpit for sales momentum, market share, execution quality, and risk signals.">
               <div className="grid metric-grid gap-4">

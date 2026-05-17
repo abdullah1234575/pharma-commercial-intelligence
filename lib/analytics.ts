@@ -1,8 +1,7 @@
-import { pharmaRecords } from "@/lib/pharma-data";
-import type { DashboardFilters, KpiMetric, PharmaRecord } from "@/types/dashboard";
+import type { DashboardFilters, FilterOptions, KpiMetric, PharmaRecord } from "@/types/dashboard";
 
 export const defaultFilters: DashboardFilters = {
-  year: "2026",
+  year: "All",
   quarter: "All",
   month: "All",
   region: "All",
@@ -14,6 +13,8 @@ export const defaultFilters: DashboardFilters = {
   customerType: "All",
   channel: "All"
 };
+
+const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -33,25 +34,23 @@ const percent = new Intl.NumberFormat("en-US", {
 });
 
 function sum(records: PharmaRecord[], key: keyof PharmaRecord) {
-  return records.reduce((total, record) => total + Number(record[key]), 0);
+  return records.reduce((total, record) => total + Number(record[key] || 0), 0);
+}
+
+function safeRate(numerator: number, denominator: number) {
+  return denominator ? numerator / denominator : 0;
 }
 
 function groupBy<T extends string>(records: PharmaRecord[], key: keyof PharmaRecord) {
   return records.reduce<Record<T, PharmaRecord[]>>((acc, record) => {
-    const value = String(record[key]) as T;
+    const value = String(record[key] || "Unassigned") as T;
     acc[value] = acc[value] || [];
     acc[value].push(record);
     return acc;
   }, {} as Record<T, PharmaRecord[]>);
 }
 
-function metric(
-  label: string,
-  value: string,
-  deltaValue: number,
-  detail: string,
-  inverse = false
-): KpiMetric {
+function metric(label: string, value: string, deltaValue: number, detail: string, inverse = false): KpiMetric {
   const isPositive = inverse ? deltaValue <= 0 : deltaValue >= 0;
   return {
     label,
@@ -62,8 +61,33 @@ function metric(
   };
 }
 
-export function filterRecords(filters: DashboardFilters) {
-  return pharmaRecords.filter((record) => {
+function uniqueOptions(records: PharmaRecord[], key: keyof PharmaRecord) {
+  return [
+    "All",
+    ...Array.from(new Set(records.map((record) => String(record[key] || "")).filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    )
+  ];
+}
+
+export function buildFilterOptions(records: PharmaRecord[]): FilterOptions {
+  return {
+    year: uniqueOptions(records, "year"),
+    quarter: uniqueOptions(records, "quarter"),
+    month: ["All", ...months.filter((month) => records.some((record) => record.month === month))],
+    region: uniqueOptions(records, "region"),
+    territory: uniqueOptions(records, "territory"),
+    productLine: uniqueOptions(records, "productLine"),
+    brand: uniqueOptions(records, "brand"),
+    medicalRep: uniqueOptions(records, "medicalRep"),
+    manager: uniqueOptions(records, "manager"),
+    customerType: uniqueOptions(records, "customerType"),
+    channel: uniqueOptions(records, "channel")
+  };
+}
+
+export function filterRecords(filters: DashboardFilters, records: PharmaRecord[]) {
+  return records.filter((record) => {
     return Object.entries(filters).every(([key, value]) => {
       if (value === "All") return true;
       const recordValue = record[key as keyof DashboardFilters];
@@ -72,20 +96,21 @@ export function filterRecords(filters: DashboardFilters) {
   });
 }
 
-export function buildDashboardModel(filters: DashboardFilters) {
-  const records = filterRecords(filters);
-  const comparisonYear = filters.year === "All" ? "2025" : String(Number(filters.year) - 1);
-  const comparisonRecords = filterRecords({ ...filters, year: comparisonYear });
-  const allRecordsForShare = pharmaRecords.filter((record) => {
-    return filters.year === "All" || String(record.year) === filters.year;
-  });
+export function buildDashboardModel(filters: DashboardFilters, sourceRecords: PharmaRecord[]) {
+  const records = filterRecords(filters, sourceRecords);
+  const numericYear = filters.year === "All" ? null : Number(filters.year);
+  const comparisonRecords = numericYear
+    ? filterRecords({ ...filters, year: String(numericYear - 1) }, sourceRecords)
+    : [];
+  const allRecordsForShare = sourceRecords.filter((record) => filters.year === "All" || String(record.year) === filters.year);
 
   const sales = sum(records, "sales");
-  const priorSales = sum(comparisonRecords, "sales") || sales * 0.91;
+  const priorSales = sum(comparisonRecords, "sales");
   const target = sum(records, "target");
   const forecast = sum(records, "forecast");
   const units = sum(records, "units");
   const activeCustomers = sum(records, "activeCustomers");
+  const customersTotal = sum(records, "customers");
   const calls = sum(records, "calls");
   const plannedCalls = sum(records, "plannedCalls");
   const margin = sum(records, "margin");
@@ -94,27 +119,26 @@ export function buildDashboardModel(filters: DashboardFilters) {
   const imsSales = sum(records, "imsSales");
   const priorImsSales = sum(records, "priorImsSales");
   const totalMarketSize = sum(allRecordsForShare, "marketSize");
-  const marketShare = totalMarketSize ? sales / totalMarketSize : 0;
-  const achievement = target ? sales / target : 0;
+  const marketShare = safeRate(sales, totalMarketSize);
+  const achievement = safeRate(sales, target);
   const accuracy = sales ? 1 - Math.abs(forecast - sales) / sales : 0;
-  const growth = priorSales ? (sales - priorSales) / priorSales : 0;
-  const rxGrowth = priorPrescriptions ? (prescriptions - priorPrescriptions) / priorPrescriptions : 0;
-  const imsGrowth = priorImsSales ? (imsSales - priorImsSales) / priorImsSales : 0;
-  const marginRate = sales ? margin / sales : 0;
-  const coverage = plannedCalls ? calls / plannedCalls : 0;
-  const repCount = new Set(records.map((record) => record.medicalRep)).size || 1;
-  const customerCount = sum(records, "customers") || 1;
+  const growth = priorSales ? safeRate(sales - priorSales, priorSales) : 0;
+  const rxGrowth = priorPrescriptions ? safeRate(prescriptions - priorPrescriptions, priorPrescriptions) : 0;
+  const imsGrowth = priorImsSales ? safeRate(imsSales - priorImsSales, priorImsSales) : 0;
+  const marginRate = safeRate(margin, sales);
+  const coverage = safeRate(calls, plannedCalls);
+  const repCount = new Set(records.map((record) => record.medicalRep).filter(Boolean)).size || 1;
+  const customerCount = customersTotal || 1;
 
-  const monthGroups = groupBy(records, "month");
-  const monthly = Object.entries(monthGroups)
+  const monthly = Object.entries(groupBy(records, "month"))
     .map(([month, monthRecords]) => ({
       month,
       monthIndex: monthRecords[0].monthIndex,
       sales: sum(monthRecords, "sales"),
       target: sum(monthRecords, "target"),
       forecast: sum(monthRecords, "forecast"),
-      growth: ((sum(monthRecords, "sales") - sum(monthRecords, "target")) / Math.max(sum(monthRecords, "target"), 1)) * 100,
-      share: (sum(monthRecords, "sales") / Math.max(sum(monthRecords, "marketSize"), 1)) * 100
+      growth: safeRate(sum(monthRecords, "sales") - sum(monthRecords, "target"), Math.max(sum(monthRecords, "target"), 1)) * 100,
+      share: safeRate(sum(monthRecords, "sales"), Math.max(sum(monthRecords, "marketSize"), 1)) * 100
     }))
     .sort((a, b) => a.monthIndex - b.monthIndex);
 
@@ -124,7 +148,7 @@ export function buildDashboardModel(filters: DashboardFilters) {
       sales: sum(brandRecords, "sales"),
       target: sum(brandRecords, "target"),
       margin: sum(brandRecords, "margin"),
-      share: (sum(brandRecords, "sales") / Math.max(sum(brandRecords, "marketSize"), 1)) * 100,
+      share: safeRate(sum(brandRecords, "sales"), Math.max(sum(brandRecords, "marketSize"), 1)) * 100,
       units: sum(brandRecords, "units")
     }))
     .sort((a, b) => b.sales - a.sales);
@@ -134,8 +158,8 @@ export function buildDashboardModel(filters: DashboardFilters) {
       name,
       sales: sum(regionRecords, "sales"),
       target: sum(regionRecords, "target"),
-      coverage: (sum(regionRecords, "calls") / Math.max(sum(regionRecords, "plannedCalls"), 1)) * 100,
-      marginRate: (sum(regionRecords, "margin") / Math.max(sum(regionRecords, "sales"), 1)) * 100
+      coverage: safeRate(sum(regionRecords, "calls"), Math.max(sum(regionRecords, "plannedCalls"), 1)) * 100,
+      marginRate: safeRate(sum(regionRecords, "margin"), Math.max(sum(regionRecords, "sales"), 1)) * 100
     }))
     .sort((a, b) => b.sales - a.sales);
 
@@ -144,8 +168,8 @@ export function buildDashboardModel(filters: DashboardFilters) {
       name,
       region: territoryRecords[0].region,
       sales: sum(territoryRecords, "sales"),
-      achievement: (sum(territoryRecords, "sales") / Math.max(sum(territoryRecords, "target"), 1)) * 100,
-      coverage: (sum(territoryRecords, "calls") / Math.max(sum(territoryRecords, "plannedCalls"), 1)) * 100
+      achievement: safeRate(sum(territoryRecords, "sales"), Math.max(sum(territoryRecords, "target"), 1)) * 100,
+      coverage: safeRate(sum(territoryRecords, "calls"), Math.max(sum(territoryRecords, "plannedCalls"), 1)) * 100
     }))
     .sort((a, b) => b.sales - a.sales);
 
@@ -155,24 +179,24 @@ export function buildDashboardModel(filters: DashboardFilters) {
       manager: repRecords[0].manager,
       sales: sum(repRecords, "sales"),
       calls: sum(repRecords, "calls"),
-      productivity: sum(repRecords, "sales") / Math.max(sum(repRecords, "calls"), 1),
-      achievement: (sum(repRecords, "sales") / Math.max(sum(repRecords, "target"), 1)) * 100
+      productivity: safeRate(sum(repRecords, "sales"), Math.max(sum(repRecords, "calls"), 1)),
+      achievement: safeRate(sum(repRecords, "sales"), Math.max(sum(repRecords, "target"), 1)) * 100
     }))
     .sort((a, b) => b.sales - a.sales);
 
   const competitor = [
-    { name: "Our Portfolio", value: sales },
+    { name: "Portfolio", value: sales },
     { name: "Competitor A", value: sum(records, "competitorA") },
     { name: "Competitor B", value: sum(records, "competitorB") },
     { name: "Competitor C", value: sum(records, "competitorC") }
-  ].sort((a, b) => b.value - a.value);
+  ].filter((entry) => entry.value > 0).sort((a, b) => b.value - a.value);
 
   const customers = Object.entries(groupBy(records, "customerType"))
     .map(([name, customerRecords]) => ({
       name,
       sales: sum(customerRecords, "sales"),
       active: sum(customerRecords, "activeCustomers"),
-      retained: Math.round((sum(customerRecords, "activeCustomers") / Math.max(sum(customerRecords, "customers"), 1)) * 100)
+      retained: Math.round(safeRate(sum(customerRecords, "activeCustomers"), Math.max(sum(customerRecords, "customers"), 1)) * 100)
     }))
     .sort((a, b) => b.sales - a.sales);
 
@@ -189,43 +213,42 @@ export function buildDashboardModel(filters: DashboardFilters) {
   ];
 
   const kpis: KpiMetric[] = [
-    metric("Total Sales", currency.format(sales), growth * 100, "Net sales across filtered scope"),
-    metric("Sales Growth %", percent.format(growth), growth * 100, "Versus equivalent prior year"),
-    metric("Market Share %", percent.format(marketShare), (marketShare - 0.18) * 100, "Portfolio share of tracked market"),
-    metric("Achievement %", percent.format(achievement), (achievement - 1) * 100, "Actual sales versus commercial target"),
-    metric("Forecast Accuracy %", percent.format(accuracy), (accuracy - 0.92) * 100, "Actual versus rolling forecast"),
-    metric("Contribution Margin", currency.format(margin), (marginRate - 0.35) * 100, "Gross contribution margin value"),
-    metric("Units Sold", compact.format(units), growth * 92, "Pack and unit volume"),
-    metric("Active Customers", compact.format(activeCustomers), 4.8, "Customers with activity this period"),
-    metric("Calls Coverage %", percent.format(coverage), (coverage - 0.85) * 100, "Executed calls versus plan"),
-    metric("Productivity per Rep", currency.format(sales / repCount), 7.2, "Sales value per active rep"),
-    metric("Average Sales per Customer", currency.format(sales / customerCount), 3.4, "Customer monetization quality"),
-    metric("Target vs Actual", currency.format(sales - target), ((sales - target) / Math.max(target, 1)) * 100, "Commercial gap to plan"),
-    metric("Profitability %", percent.format(marginRate), (marginRate - 0.34) * 100, "Contribution margin rate"),
-    metric("Rx Growth", percent.format(rxGrowth), rxGrowth * 100, "Prescription growth proxy"),
-    metric("IMS Growth", percent.format(imsGrowth), imsGrowth * 100, "External market growth proxy"),
-    metric("YTD Sales", currency.format(sales), growth * 100, "Year-to-date filtered sales"),
-    metric("MAT Growth", percent.format(growth * 0.86), growth * 86, "Moving annual total trend")
+    metric("Total Sales", currency.format(sales), growth * 100, "Calculated from uploaded sales columns"),
+    metric("Sales Growth %", percent.format(growth), growth * 100, "Versus previous available year"),
+    metric("Market Share %", percent.format(marketShare), marketShare * 100, "Sales divided by uploaded market size"),
+    metric("Achievement %", percent.format(achievement), (achievement - 1) * 100, "Actual sales versus uploaded target"),
+    metric("Forecast Accuracy %", percent.format(Math.max(accuracy, 0)), (accuracy - 0.9) * 100, "Actual versus uploaded forecast"),
+    metric("Contribution Margin", currency.format(margin), marginRate * 100, "Uploaded or inferred margin value"),
+    metric("Units Sold", compact.format(units), growth * 100, "Uploaded unit volume"),
+    metric("Active Customers", compact.format(activeCustomers), safeRate(activeCustomers, customerCount) * 100, "Active customers from tenant data"),
+    metric("Rx Growth", percent.format(rxGrowth), rxGrowth * 100, "Prescription trend from uploaded data"),
+    metric("IMS Growth", percent.format(imsGrowth), imsGrowth * 100, "External market trend from uploaded data"),
+    metric("Productivity per Rep", currency.format(safeRate(sales, repCount)), growth * 100, "Sales generated per active representative")
   ];
 
-  const alerts = [
-    achievement < 0.98
-      ? "Achievement is below plan; prioritize territory recovery actions."
-      : "Achievement is ahead of plan; protect momentum in high-value accounts.",
-    coverage < 0.86
-      ? "Calls coverage is creating execution risk in selected territories."
-      : "Field execution coverage is healthy across the selected scope.",
-    accuracy < 0.92
-      ? "Forecast accuracy needs review; variance is above leadership tolerance."
-      : "Forecast variance remains within executive tolerance."
-  ];
+  const alerts =
+    records.length === 0
+      ? ["Upload Excel or CSV data to activate tenant analytics.", "KPIs and charts will be generated from private workspace data.", "Supabase RLS keeps uploaded rows isolated by workspace."]
+      : [
+          achievement < 0.98 ? "Achievement is below plan; review target gaps by territory." : "Achievement is at or above plan in the selected scope.",
+          coverage && coverage < 0.86 ? "Calls coverage indicates field execution risk." : "Field execution coverage is within expected tolerance.",
+          accuracy && accuracy < 0.9 ? "Forecast accuracy requires review; variance is elevated." : "Forecast accuracy is stable for the selected data."
+        ];
 
-  const insights = [
-    `${byBrand[0]?.name ?? "Lead brand"} is the leading brand and contributes ${percent.format((byBrand[0]?.sales ?? 0) / Math.max(sales, 1))} of filtered sales.`,
-    `${byRegion[0]?.name ?? "Top region"} leads regional performance with ${currency.format(byRegion[0]?.sales ?? 0)} in sales.`,
-    `${byRep[0]?.name ?? "Top rep"} has the strongest field contribution at ${currency.format(byRep[0]?.sales ?? 0)}.`,
-    `Forecast accuracy is ${percent.format(accuracy)}, with a variance of ${currency.format(sales - forecast)}.`
-  ];
+  const insights =
+    records.length === 0
+      ? [
+          "No tenant dataset is loaded yet. Upload files to generate live insights.",
+          "The mapping engine will infer sales, products, dates, territories, reps, targets, and market fields.",
+          "Saved dashboards and exports are ready to connect to Supabase once credentials are configured.",
+          "All KPI values are dynamic and calculated from processed_data rows."
+        ]
+      : [
+          `${byBrand[0]?.name ?? "Top product"} is the leading product with ${currency.format(byBrand[0]?.sales ?? 0)} in sales.`,
+          `${byTerritory.at(-1)?.name ?? "Lowest territory"} is the lowest territory by sales and should be reviewed.`,
+          `${byRep[0]?.name ?? "Top rep"} leads rep effectiveness at ${currency.format(byRep[0]?.productivity ?? 0)} per call.`,
+          `Forecast variance is ${currency.format(sales - forecast)}, with ${percent.format(Math.max(accuracy, 0))} forecast accuracy.`
+        ];
 
   return {
     records,

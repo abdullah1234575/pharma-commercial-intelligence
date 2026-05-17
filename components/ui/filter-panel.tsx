@@ -1,8 +1,7 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
-import { filterOptions } from "@/lib/pharma-data";
-import type { DashboardFilters } from "@/types/dashboard";
+import type { DashboardFilters, FilterOptions } from "@/types/dashboard";
 
 type FilterKey = keyof DashboardFilters;
 
@@ -22,10 +21,12 @@ const labels: Record<FilterKey, string> = {
 
 export function FilterPanel({
   filters,
+  options,
   onChange,
   onReset
 }: {
   filters: DashboardFilters;
+  options: FilterOptions;
   onChange: (key: FilterKey, value: string) => void;
   onReset: () => void;
 }) {
@@ -54,7 +55,7 @@ export function FilterPanel({
               value={filters[key]}
               onChange={(event) => onChange(key, event.target.value)}
             >
-              {filterOptions[key].map((option) => (
+              {options[key].map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>

@@ -2,8 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pharma Commercial Intelligence",
-  description: "Executive commercial intelligence dashboard for pharmaceutical leaders"
+  title: "Pharma Commercial Intelligence | Synaptic Group",
+  description: "Executive commercial intelligence dashboard for pharmaceutical leaders",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png"
+  }
 };
 
 export default function RootLayout({

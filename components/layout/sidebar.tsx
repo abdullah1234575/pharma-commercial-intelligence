@@ -4,13 +4,13 @@ import {
   Activity,
   BarChart3,
   BrainCircuit,
-  BriefcaseBusiness,
   ChevronRight,
   Gauge,
   Map,
   Stethoscope,
   Users
 } from "lucide-react";
+import { BrandMark } from "@/components/ui/brand-mark";
 
 const nav = [
   { id: "summary", label: "Executive Summary", icon: Gauge },
@@ -25,14 +25,8 @@ const nav = [
 export function Sidebar() {
   return (
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-4 py-5 lg:block">
-      <div className="mb-8 flex items-center gap-3">
-        <div className="grid h-11 w-11 place-items-center rounded-lg bg-ocean text-white">
-          <BriefcaseBusiness className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-ocean">Pharma CI</p>
-          <h1 className="text-lg font-semibold leading-tight">Commercial Intelligence</h1>
-        </div>
+      <div className="mb-8">
+        <BrandMark variant="sidebar" />
       </div>
       <nav className="space-y-1">
         {nav.map((item) => {

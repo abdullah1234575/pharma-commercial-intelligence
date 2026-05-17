@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     return acc;
   }, { ...defaultFilters });
 
-  const model = buildDashboardModel(filters);
+  const model = buildDashboardModel(filters, []);
 
   return NextResponse.json({
     filters,
