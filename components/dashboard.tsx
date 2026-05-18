@@ -75,6 +75,12 @@ export function PharmaDashboard() {
     void persistUploadToSupabase(item, nextRecords);
   }
 
+  function handleDeleteUploadHistory(itemId: string) {
+    const nextHistory = uploadHistory.filter((item) => item.id !== itemId);
+    setUploadHistory(nextHistory);
+    window.localStorage.setItem("pci:upload-history", JSON.stringify(nextHistory));
+  }
+
   function exportExcel() {
     const header = Object.keys(records[0] ?? {});
     const csv = [
@@ -115,7 +121,7 @@ export function PharmaDashboard() {
             onSaveDashboard={saveDashboard}
           />
           <div className="space-y-8 p-4 md:p-6">
-            <UploadCenter history={uploadHistory} onProcessed={handleProcessedUpload} />
+            <UploadCenter history={uploadHistory} onProcessed={handleProcessedUpload} onDelete={handleDeleteUploadHistory} />
             <FilterPanel filters={filters} options={filterOptions} onChange={updateFilter} onReset={() => setFilters(defaultFilters)} />
 
             {!records.length ? (

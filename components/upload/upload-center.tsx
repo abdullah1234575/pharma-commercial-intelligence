@@ -1,18 +1,18 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, FileSpreadsheet, RotateCw, UploadCloud } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertCircle, CheckCircle2, FileSpreadsheet, RotateCw, Trash2, UploadCloud } from "lucide-react";
 import { parseCommercialFile } from "@/lib/data-mapping";
 import { templateDefinitions } from "@/lib/template-definitions";
 import type { ParsedSheet, PharmaRecord, UploadHistoryItem } from "@/types/dashboard";
 
-export function UploadCenter({
-  history,
-  onProcessed
-}: {
+type UploadCenterProps = {
   history: UploadHistoryItem[];
   onProcessed: (records: PharmaRecord[], sheets: ParsedSheet[], historyItem: UploadHistoryItem) => void;
-}) {
+  onDelete?: (itemId: string) => void;
+};
+
+export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -20,6 +20,11 @@ export function UploadCenter({
   const [lastFiles, setLastFiles] = useState<File[]>([]);
   const [sheets, setSheets] = useState<ParsedSheet[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [displayHistory, setDisplayHistory] = useState<UploadHistoryItem[]>(history);
+
+  useEffect(() => {
+    setDisplayHistory(history);
+  }, [history]);
 
   async function processFiles(files: File[]) {
     if (!files.length) return;
@@ -70,6 +75,11 @@ export function UploadCenter({
 
   function handleFiles(fileList: FileList | null) {
     void processFiles(Array.from(fileList ?? []));
+  }
+
+  function handleDeleteHistory(itemId: string) {
+    setDisplayHistory((current) => current.filter((item) => item.id !== itemId));
+    onDelete?.(itemId);
   }
 
   return (
@@ -189,13 +199,23 @@ export function UploadCenter({
       <div className="mt-4">
         <h3 className="mb-2 text-sm font-semibold">Upload History</h3>
         <div className="space-y-2">
-          {history.slice(0, 4).map((item) => (
-            <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel-soft))] p-3 text-sm">
-              <span className="flex min-w-0 items-center gap-2">
-                {item.status === "processed" ? <CheckCircle2 className="h-4 w-4 shrink-0 text-mint" /> : <AlertCircle className="h-4 w-4 shrink-0 text-danger" />}
-                <span className="truncate">{item.fileName}</span>
-              </span>
-              <span className="text-xs text-[rgb(var(--muted))]">{item.sheets} sheets | {item.rows} rows | {item.message}</span>
+          {displayHistory.slice(0, 4).map((item) => (
+            <div key={item.id} className="grid gap-3 rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel-soft))] p-3 text-sm md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  {item.status === "processed" ? <CheckCircle2 className="h-4 w-4 shrink-0 text-mint" /> : <AlertCircle className="h-4 w-4 shrink-0 text-danger" />}
+                  <p className="truncate font-semibold">{item.fileName}</p>
+                </div>
+                <p className="mt-1 text-xs text-[rgb(var(--muted))]">{item.sheets} sheets | {item.rows} rows | {item.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleDeleteHistory(item.id)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-danger transition hover:bg-danger/15 focus:outline-none focus:ring-2 focus:ring-danger/30"
+                aria-label={`Delete ${item.fileName}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
           ))}
           {!history.length ? <p className="text-sm text-[rgb(var(--muted))]">No uploads yet.</p> : null}
