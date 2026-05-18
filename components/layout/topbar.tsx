@@ -21,21 +21,21 @@ export function Topbar({
   onSaveDashboard: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-[rgb(var(--border))] bg-[rgb(var(--background))]/92 px-4 py-4 backdrop-blur transition dark:bg-[#020617]/95 md:px-6">
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <header className="sticky top-0 z-20 border-b border-[rgb(var(--border))] bg-[rgb(var(--background))]/92 px-4 py-3 backdrop-blur transition dark:bg-[#020617]/95 md:px-6">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ocean">Global Pharma Commercial Excellence</p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
-              <h1 className="min-w-0 text-3xl font-semibold tracking-tight text-[rgb(var(--text))] sm:text-4xl md:text-5xl">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-ocean md:text-xs">Global Pharma Commercial Excellence</p>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <h1 className="min-w-0 text-2xl font-semibold tracking-tight text-[rgb(var(--text))] sm:text-3xl lg:text-4xl">
                 Pharma Commercial Intelligence
               </h1>
-              <span className="inline-flex rounded-full border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-[rgb(var(--muted))] sm:text-sm">
+              <span className="inline-flex rounded-full border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-[rgb(var(--muted))] sm:text-xs">
                 Executive dashboard
               </span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <button
               className="inline-flex h-10 items-center gap-2 rounded-md border border-[rgb(var(--border))] px-3 text-sm font-medium transition hover:border-ocean hover:text-ocean"
               title="Refresh data"
@@ -44,23 +44,23 @@ export function Topbar({
               <RefreshCcw className="h-4 w-4" />
               Live
             </button>
-            <span className="inline-flex rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-3 py-2 text-xs font-medium text-[rgb(var(--muted))] sm:text-sm">
+            <span className="inline-flex rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-3 py-2 text-[0.7rem] font-medium text-[rgb(var(--muted))] sm:text-xs">
               Refreshed {lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
           </div>
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_1fr] xl:grid-cols-[minmax(0,1.6fr)_1fr]">
+        <div className="grid gap-3 md:grid-cols-[1.2fr_auto] xl:grid-cols-[1.3fr_auto]">
           <div className="relative min-w-0">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[rgb(var(--muted))]" />
             <input
-              className="h-12 w-full rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-10 pr-3 text-sm outline-none transition focus:border-ocean focus:ring-2 focus:ring-ocean/20"
+              className="h-10 w-full rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-10 pr-3 text-sm outline-none transition focus:border-ocean focus:ring-2 focus:ring-ocean/20"
               placeholder="Search brands, reps, territories"
             />
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <details className="group relative w-full sm:w-auto">
-              <summary className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-4 text-sm font-medium transition hover:border-ocean hover:text-ocean sm:w-auto">
+              <summary className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-3 text-sm font-medium transition hover:border-ocean hover:text-ocean sm:w-auto">
                 <Download className="h-4 w-4" />
                 Download Template
               </summary>
@@ -78,7 +78,7 @@ export function Topbar({
               </div>
             </details>
             <button
-              className="inline-flex h-12 items-center gap-2 rounded-md border border-[rgb(var(--border))] px-4 text-sm font-medium transition hover:border-ocean hover:text-ocean"
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-[rgb(var(--border))] px-3 text-sm font-medium transition hover:border-ocean hover:text-ocean"
               title="Export to Excel"
               onClick={onExportExcel}
             >
@@ -86,7 +86,7 @@ export function Topbar({
               Excel
             </button>
             <button
-              className="inline-flex h-12 items-center gap-2 rounded-md border border-[rgb(var(--border))] px-4 text-sm font-medium transition hover:border-ocean hover:text-ocean"
+              className="inline-flex h-10 items-center gap-2 rounded-md border border-[rgb(var(--border))] px-3 text-sm font-medium transition hover:border-ocean hover:text-ocean"
               title="Export to PDF"
               onClick={onExportPdf}
             >
@@ -94,7 +94,7 @@ export function Topbar({
               PDF
             </button>
             <button
-              className="inline-flex h-12 items-center gap-2 rounded-md bg-ocean px-4 text-sm font-semibold text-white transition hover:bg-aqua"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-ocean px-3 text-sm font-semibold text-white transition hover:bg-aqua"
               title="Save dashboard configuration"
               onClick={onSaveDashboard}
             >
@@ -102,11 +102,11 @@ export function Topbar({
               Save
             </button>
             <button
-              className="grid h-12 w-12 place-items-center rounded-md border border-[rgb(var(--border))] transition hover:border-ocean hover:text-ocean"
+              className="grid h-10 w-10 place-items-center rounded-md border border-[rgb(var(--border))] transition hover:border-ocean hover:text-ocean"
               onClick={onToggleDark}
               title="Toggle dark mode"
             >
-              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
           </div>
         </div>
