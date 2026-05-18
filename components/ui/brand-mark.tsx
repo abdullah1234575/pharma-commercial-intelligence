@@ -34,7 +34,7 @@ export function BrandMark({ variant = "navbar", compact = false, logoSrc = "/syn
       {!compact ? (
         <div className="min-w-0">
           <p className={clsx("truncate font-semibold text-[rgb(var(--text))]", variant === "login" ? "text-xl" : "text-base")}>
-            Synaptic Group
+            Synaptic Analysis
           </p>
           <p className="truncate text-xs font-medium uppercase tracking-[0.1em] text-[rgb(var(--muted))]">
             Abdullah Alshawadfy
