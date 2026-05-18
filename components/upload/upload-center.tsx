@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, FileSpreadsheet, RotateCw, Trash2, UploadCloud } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileSpreadsheet, RotateCw, Trash2 } from "lucide-react";
 import { parseCommercialFile } from "@/lib/data-mapping";
 import { templateDefinitions } from "@/lib/template-definitions";
 import type { ParsedSheet, PharmaRecord, UploadHistoryItem } from "@/types/dashboard";
@@ -14,7 +14,6 @@ type UploadCenterProps = {
 
 export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [lastFiles, setLastFiles] = useState<File[]>([]);
@@ -84,70 +83,60 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
 
   return (
     <section className="glass-panel rounded-lg p-4 shadow-executive dark:shadow-executive-dark">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[rgb(var(--muted))]">Tenant Data Upload</h2>
-          <p className="text-sm text-[rgb(var(--muted))]">Upload Excel or CSV files. Multiple sheets are mapped into a private commercial fact model.</p>
-        </div>
-        <button
-          className="inline-flex h-9 items-center gap-2 rounded-md border border-[rgb(var(--border))] px-3 text-sm font-medium transition hover:border-ocean hover:text-ocean"
-          onClick={() => inputRef.current?.click()}
-        >
-          <FileSpreadsheet className="h-4 w-4" />
-          Browse
-        </button>
-      </div>
-
-      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_0.9fr]">
-        <div className="rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel-soft))] p-4">
-          <h3 className="text-sm font-semibold">Before You Upload</h3>
-          <div className="mt-2 grid gap-2 text-sm leading-6 text-[rgb(var(--muted))] sm:grid-cols-2">
-            <p>1. Download the relevant template.</p>
-            <p>2. Keep required column headers unchanged.</p>
-            <p>3. Replace sample rows with company data.</p>
-            <p>4. Upload the completed Excel or CSV file.</p>
-          </div>
-        </div>
-        <div className="rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel-soft))] p-4">
-          <h3 className="text-sm font-semibold">Download Template</h3>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {templateDefinitions.map((template) => (
-              <a
-                key={template.type}
-                className="inline-flex h-9 items-center gap-2 rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-3 text-sm font-medium transition hover:border-ocean hover:text-ocean"
-                href={template.href}
-                download={template.fileName}
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                {template.label}
-              </a>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div
-        className={`grid min-h-40 place-items-center rounded-lg border border-dashed p-6 text-center transition ${
-          isDragging ? "border-ocean bg-ocean/10" : "border-[rgb(var(--border))] bg-[rgb(var(--panel-soft))]"
-        }`}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setIsDragging(true);
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={(event) => {
-          event.preventDefault();
-          setIsDragging(false);
-          handleFiles(event.dataTransfer.files);
-        }}
-      >
-        <input ref={inputRef} hidden multiple type="file" accept=".csv,.xls,.xlsx" onChange={(event) => handleFiles(event.target.files)} />
-        <div className="max-w-xl">
-          <UploadCloud className="mx-auto h-9 w-9 text-ocean" />
-          <p className="mt-3 text-base font-semibold">Drop commercial data files here</p>
-          <p className="mt-1 text-sm leading-6 text-[rgb(var(--muted))]">
-            The mapping engine detects sales, product, date, territory, rep, manager, target, forecast, and market fields even when names vary by company.
+      <input ref={inputRef} hidden multiple type="file" accept=".csv,.xls,.xlsx" onChange={(event) => handleFiles(event.target.files)} />
+      <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--panel-soft))] p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ocean">Tenant Data Upload</p>
+          <p className="mt-1 truncate text-sm text-[rgb(var(--muted))] sm:max-w-xl">
+            Upload Excel or CSV files to map multi-sheet commercial data into your private analytics workspace.
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-ocean px-4 text-sm font-semibold text-white transition hover:bg-aqua"
+            onClick={() => inputRef.current?.click()}
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Upload
+          </button>
+          <details className="group relative w-full sm:w-auto">
+            <summary className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-4 text-sm font-medium transition hover:border-ocean hover:text-ocean sm:w-auto">
+              <FileSpreadsheet className="h-4 w-4" />
+              Templates
+            </summary>
+            <div className="absolute right-0 z-30 mt-2 w-full rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--panel))] p-2 shadow-executive dark:shadow-executive-dark sm:w-64">
+              {templateDefinitions.map((template) => (
+                <a
+                  key={template.type}
+                  className="block rounded-md px-3 py-2 text-sm transition hover:bg-[rgb(var(--panel-soft))] hover:text-ocean"
+                  href={template.href}
+                  download={template.fileName}
+                >
+                  {template.label}
+                </a>
+              ))}
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+        <div className="min-w-0">
+          {isProcessing || progress > 0 ? (
+            <div className="rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--panel))] p-3 text-sm text-[rgb(var(--text))]">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-medium text-[rgb(var(--text))]">{isProcessing ? "Processing upload" : "Last upload"}</p>
+                <span className="text-xs text-[rgb(var(--muted))]">{progress}%</span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[rgb(var(--panel-soft))]">
+                <div className="h-2 rounded-full bg-ocean transition-all" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 text-xs text-[rgb(var(--muted))]">
+          <span className="rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-3 py-2">{displayHistory.length} history entries</span>
+          <span className="rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-3 py-2">{sheets.length ? `${sheets.length} sheet(s) processed` : "Ready to upload"}</span>
         </div>
       </div>
 
