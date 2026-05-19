@@ -90,28 +90,28 @@ export function LoginClient() {
   return (
     <main className="min-h-screen bg-[rgb(var(--background))] px-4 py-8 text-[rgb(var(--text))]">
       <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] items-center">
-        <section className="overflow-hidden rounded-[2rem] border border-[rgb(var(--border))] bg-white/80 p-8 shadow-executive backdrop-blur-lg backdrop-saturate-150 dark:bg-[#081b33]/80 dark:border-[#22345c] dark:shadow-none lg:p-12">
-          <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#0f4f87]/90 via-[#1b6caf]/80 to-[#205c9b]/65 px-8 py-10 text-white shadow-lg shadow-[#0f4f8780]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.24),_transparent_26%),_radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.18),_transparent_30%)]" />
+        <section className="overflow-hidden rounded-[2rem] border border-[#0f4c4c]/30 bg-[#071f1f]/85 p-8 shadow-[0_30px_80px_rgba(15,76,76,0.24)] backdrop-blur-lg backdrop-saturate-150 dark:bg-[#031616]/90 dark:border-[#0b3f3f]/40 lg:p-12">
+          <div className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#0F4C4C] via-[#0B6E4F] to-[#8B6B2E] px-8 py-10 text-white shadow-[0_30px_80px_rgba(15,76,76,0.24)]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.18),_transparent_24%),_radial-gradient(circle_at_bottom_right,_rgba(139,107,46,0.18),_transparent_32%)]" />
             <div className="relative max-w-xl">
               <BrandMark variant="login" />
-              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.26em] text-cyan-100/85">Premium Pharma Analytics</p>
+              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.26em] text-emerald-100/85">Premium Pharma Analytics</p>
               <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">Pharma Commercial Intelligence</h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-cyan-100/90 sm:text-lg">
+              <p className="mt-5 max-w-2xl text-base leading-7 text-emerald-100/90 sm:text-lg">
                 Advanced Pharma Analytics & Business Intelligence Platform Built by Abdullah Alshawadfy
               </p>
-              <p className="mt-6 max-w-2xl text-sm leading-7 text-cyan-100/80">
+              <p className="mt-6 max-w-2xl text-sm leading-7 text-emerald-100/80">
                 Upload your pharma sales data, generate executive dashboards, analyze market performance, export professional reports, and transform raw data into strategic business insights.
               </p>
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-3xl bg-white/10 p-4 backdrop-blur-sm ring-1 ring-white/20">
-                  <p className="text-xs uppercase tracking-[0.24em] text-cyan-100/80">Name</p>
+                <div className="rounded-3xl bg-white/10 p-4 backdrop-blur-sm ring-1 ring-[#8b6b2e]/20">
+                  <p className="text-xs uppercase tracking-[0.24em] text-emerald-100/80">Name</p>
                   <p className="mt-2 text-lg font-semibold">Abdullah Alshawadfy</p>
                 </div>
-                <div className="rounded-3xl bg-white/10 p-4 backdrop-blur-sm ring-1 ring-white/20">
-                  <p className="text-xs uppercase tracking-[0.24em] text-cyan-100/80">Title</p>
+                <div className="rounded-3xl bg-white/10 p-4 backdrop-blur-sm ring-1 ring-[#8b6b2e]/20">
+                  <p className="text-xs uppercase tracking-[0.24em] text-emerald-100/80">Title</p>
                   <p className="mt-2 text-lg font-semibold">Pharma Commercial Intelligence Specialist</p>
-                  <p className="text-sm text-cyan-100/80">Business Analytics Consultant</p>
+                  <p className="text-sm text-emerald-100/80">Business Analytics Consultant</p>
                 </div>
               </div>
               <div className="mt-8 flex flex-wrap gap-2">
