@@ -7,6 +7,11 @@ create table public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
   full_name text,
+  company text,
+  phone text,
+  source text,
+  verified boolean not null default false,
+  last_active timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -23,6 +28,20 @@ create table public.workspace_members (
   role public.user_role not null default 'viewer',
   created_at timestamptz not null default now(),
   primary key (workspace_id, user_id)
+);
+
+create table public.user_leads (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references public.users(id),
+  email text not null,
+  full_name text,
+  company text,
+  phone text,
+  source text,
+  verified boolean not null default false,
+  export_count int not null default 0,
+  last_active timestamptz,
+  created_at timestamptz not null default now()
 );
 
 create table public.uploads (
@@ -138,8 +157,17 @@ as $$
 declare
   new_workspace_id uuid;
 begin
-  insert into public.users (id, email, full_name)
-  values (new.id, new.email, new.raw_user_meta_data->>'full_name')
+  insert into public.users (id, email, full_name, company, phone, source, verified, last_active)
+  values (
+    new.id,
+    new.email,
+    new.raw_user_meta_data->>'full_name',
+    new.raw_user_meta_data->>'company',
+    new.raw_user_meta_data->>'phone',
+    new.raw_user_meta_data->>'source',
+    coalesce((new.raw_user_meta_data->>'verified')::boolean, false),
+    now()
+  )
   on conflict (id) do nothing;
 
   insert into public.workspaces (name, owner_id)

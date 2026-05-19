@@ -26,6 +26,14 @@ npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
+### Production build
+
+```powershell
+npm.cmd run build
+```
+
+This verifies the complete app, including authentication, upload flow, and exports.
+
 Login/signup page: [http://127.0.0.1:3000/login](http://127.0.0.1:3000/login).
 
 ## Supabase Setup
@@ -37,7 +45,18 @@ Login/signup page: [http://127.0.0.1:3000/login](http://127.0.0.1:3000/login).
 ```text
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+SENDGRID_API_KEY=
+LEAD_NOTIFICATION_EMAIL=Abdullahalshawadfy410@gmail.com
 ```
+
+### Local environment file
+
+Copy the values into `.env.local` for local development. Do not commit `.env.local` to source control.
+
+### Notification setup
+
+The app uses SendGrid for admin lead notifications. If `SENDGRID_API_KEY` is not configured, notification calls are safely skipped and the app continues running.
 
 The schema creates:
 

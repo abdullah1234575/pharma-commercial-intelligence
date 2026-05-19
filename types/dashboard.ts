@@ -14,6 +14,7 @@ export type DashboardFilters = {
 
 export type PharmaRecord = {
   id: string;
+  uploadId?: string;
   year: number;
   quarter: string;
   month: string;
@@ -74,6 +75,7 @@ export type ParsedSheet = {
 export type UploadHistoryItem = {
   id: string;
   fileName: string;
+  sourceFiles: string[];
   sheets: number;
   rows: number;
   status: "processed" | "failed";

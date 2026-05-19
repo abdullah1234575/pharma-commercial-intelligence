@@ -202,7 +202,7 @@ function textValue(input: unknown, fallback: string) {
   return valueText || fallback;
 }
 
-function normalizeRows(rows: RawRow[], mapping: ColumnMapping, fileName: string, sheetName: string): PharmaRecord[] {
+function normalizeRows(rows: RawRow[], mapping: ColumnMapping, fileName: string, sheetName: string, uploadId?: string): PharmaRecord[] {
   return rows.map((row, index) => {
     const dateParts = parseDateParts(row, mapping);
     const sales = parseNumber(value(row, mapping, "sales"));
@@ -215,8 +215,10 @@ function normalizeRows(rows: RawRow[], mapping: ColumnMapping, fileName: string,
     const prescriptions = parseNumber(value(row, mapping, "prescriptions"));
     const imsSales = parseNumber(value(row, mapping, "imsSales"));
 
+    const recordId = uploadId ? `${uploadId}-${fileName}-${sheetName}-${index}` : `${fileName}-${sheetName}-${index}`;
     return {
-      id: `${fileName}-${sheetName}-${index}`,
+      id: recordId,
+      uploadId,
       ...dateParts,
       region: textValue(value(row, mapping, "region"), "Unassigned Region"),
       territory: textValue(value(row, mapping, "territory"), "Unassigned Territory"),
@@ -247,7 +249,7 @@ function normalizeRows(rows: RawRow[], mapping: ColumnMapping, fileName: string,
   });
 }
 
-export async function parseCommercialFile(file: File): Promise<ParsedSheet[]> {
+export async function parseCommercialFile(file: File, uploadId?: string): Promise<ParsedSheet[]> {
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (!extension || !["csv", "xls", "xlsx"].includes(extension)) {
     throw new Error("Only CSV, XLS, and XLSX files are supported.");
@@ -272,7 +274,7 @@ export async function parseCommercialFile(file: File): Promise<ParsedSheet[]> {
           ...(template ? templateErrors : ["Correction required: uploaded sheet does not match a standardized Synaptic Group template. Download a template and keep the required headers unchanged."]),
           ...(!template && missingRequired.length ? [`Missing mapped fields: ${missingRequired.join(", ")}.`] : [])
         ];
-    const records = errors.length || isInstructionSheet ? [] : normalizeRows(rows, mapping, file.name, sheetName);
+    const records = errors.length || isInstructionSheet ? [] : normalizeRows(rows, mapping, file.name, sheetName, uploadId);
 
     return {
       fileName: file.name,

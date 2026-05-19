@@ -1,6 +1,7 @@
 "use client";
 
-import { Download, FileSpreadsheet, Moon, RefreshCcw, Search, ShieldCheck, Sun } from "lucide-react";
+import Link from "next/link";
+import { Download, FileSpreadsheet, LogOut, Moon, RefreshCcw, Search, ShieldCheck, Sun } from "lucide-react";
 import { templateDefinitions } from "@/lib/template-definitions";
 
 export function Topbar({
@@ -10,7 +11,11 @@ export function Topbar({
   lastRefresh,
   onExportExcel,
   onExportPdf,
-  onSaveDashboard
+  onSaveDashboard,
+  userEmail,
+  isAuthenticated,
+  isVerified,
+  onSignOut
 }: {
   darkMode: boolean;
   onToggleDark: () => void;
@@ -19,10 +24,14 @@ export function Topbar({
   onExportExcel: () => void;
   onExportPdf: () => void;
   onSaveDashboard: () => void;
+  userEmail?: string;
+  isAuthenticated: boolean;
+  isVerified: boolean;
+  onSignOut: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-[rgb(var(--border))] bg-[rgb(var(--background))]/92 px-4 py-3 backdrop-blur transition dark:bg-[#020617]/95 md:px-6">
-      <div className="flex flex-col gap-4">
+    <header className="sticky top-0 z-20 border-b border-[rgb(var(--border))] bg-[rgb(var(--background))]/92 px-4 py-2 backdrop-blur transition dark:bg-[#020617]/95 md:px-6">
+      <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-ocean md:text-xs">Global Pharma Commercial Excellence</p>
@@ -101,6 +110,28 @@ export function Topbar({
               <ShieldCheck className="h-4 w-4" />
               Save
             </button>
+            {isAuthenticated ? (
+              <>
+                <Link
+                  className="inline-flex h-10 items-center gap-2 rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-3 text-sm font-medium transition hover:border-ocean hover:text-ocean"
+                  href="/profile"
+                >
+                  Profile
+                </Link>
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-md border border-[rgb(var(--border))] px-3 text-sm font-medium transition hover:border-ocean hover:text-ocean"
+                  title="Sign out"
+                  onClick={onSignOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </button>
+                <div className="hidden items-center gap-2 rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-3 text-sm text-[rgb(var(--muted))] md:inline-flex">
+                  <span className="rounded-full bg-mint/10 px-2 py-1 text-[0.65rem] uppercase tracking-[0.18em] text-mint">{isVerified ? "Verified" : "Pending"}</span>
+                  <span className="truncate">{userEmail}</span>
+                </div>
+              </>
+            ) : null}
             <button
               className="grid h-10 w-10 place-items-center rounded-md border border-[rgb(var(--border))] transition hover:border-ocean hover:text-ocean"
               onClick={onToggleDark}

@@ -9,7 +9,7 @@ import type { ParsedSheet, PharmaRecord, UploadHistoryItem } from "@/types/dashb
 type UploadCenterProps = {
   history: UploadHistoryItem[];
   onProcessed: (records: PharmaRecord[], sheets: ParsedSheet[], historyItem: UploadHistoryItem) => void;
-  onDelete?: (itemId: string) => void;
+  onDelete?: (historyItem: UploadHistoryItem) => void;
 };
 
 export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterProps) {
@@ -27,24 +27,34 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
 
   async function processFiles(files: File[]) {
     if (!files.length) return;
+    const existingFileNames = new Set(history.flatMap((item) => item.sourceFiles));
+    const filesToImport = files.filter((file) => !existingFileNames.has(file.name));
+    if (!filesToImport.length) {
+      setError("Selected files were already uploaded. Remove the existing upload or choose a different dataset.");
+      return;
+    }
+
+    const uploadId = crypto.randomUUID();
     setIsProcessing(true);
     setProgress(8);
     setError(null);
-    setLastFiles(files);
+    setLastFiles(filesToImport);
+    setSheets([]);
 
     try {
       const parsed: ParsedSheet[] = [];
-      for (const [index, file] of files.entries()) {
-        setProgress(Math.round(((index + 0.35) / files.length) * 100));
-        parsed.push(...(await parseCommercialFile(file)));
-        setProgress(Math.round(((index + 1) / files.length) * 100));
+      for (const [index, file] of filesToImport.entries()) {
+        setProgress(Math.round(((index + 0.35) / filesToImport.length) * 100));
+        parsed.push(...(await parseCommercialFile(file, uploadId)));
+        setProgress(Math.round(((index + 1) / filesToImport.length) * 100));
       }
 
       const blockingErrors = parsed.flatMap((sheet) => sheet.errors);
       const records = blockingErrors.length ? [] : parsed.flatMap((sheet) => sheet.records);
       const item: UploadHistoryItem = {
-        id: crypto.randomUUID(),
+        id: uploadId,
         fileName: files.map((file) => file.name).join(", "),
+        sourceFiles: files.map((file) => file.name),
         sheets: parsed.length,
         rows: records.length,
         status: records.length > 0 ? "processed" : "failed",
@@ -60,6 +70,7 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
       onProcessed([], [], {
         id: crypto.randomUUID(),
         fileName: files.map((file) => file.name).join(", "),
+        sourceFiles: files.map((file) => file.name),
         sheets: 0,
         rows: 0,
         status: "failed",
@@ -76,13 +87,14 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
     void processFiles(Array.from(fileList ?? []));
   }
 
-  function handleDeleteHistory(itemId: string) {
-    setDisplayHistory((current) => current.filter((item) => item.id !== itemId));
-    onDelete?.(itemId);
+  function handleDeleteHistory(item: UploadHistoryItem) {
+    setDisplayHistory((current) => current.filter((historyItem) => historyItem.id !== item.id));
+    setSheets([]);
+    onDelete?.(item);
   }
 
   return (
-    <section className="glass-panel rounded-lg p-4 shadow-executive dark:shadow-executive-dark">
+    <section id="upload-center" className="glass-panel rounded-lg p-4 shadow-executive dark:shadow-executive-dark">
       <input ref={inputRef} hidden multiple type="file" accept=".csv,.xls,.xlsx" onChange={(event) => handleFiles(event.target.files)} />
       <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--panel-soft))] p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
@@ -140,18 +152,6 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
         </div>
       </div>
 
-      {isProcessing || progress > 0 ? (
-        <div className="mt-4">
-          <div className="mb-1 flex justify-between text-xs font-semibold text-[rgb(var(--muted))]">
-            <span>{isProcessing ? "Processing upload" : "Last upload"}</span>
-            <span>{progress}%</span>
-          </div>
-          <div className="h-2 rounded-full bg-[rgb(var(--panel-soft))]">
-            <div className="h-2 rounded-full bg-ocean transition-all" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-      ) : null}
-
       {error ? (
         <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
           <span className="flex items-center gap-2">
@@ -199,7 +199,7 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
               </div>
               <button
                 type="button"
-                onClick={() => handleDeleteHistory(item.id)}
+                onClick={() => handleDeleteHistory(item)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-danger transition hover:bg-danger/15 focus:outline-none focus:ring-2 focus:ring-danger/30"
                 aria-label={`Delete ${item.fileName}`}
               >
