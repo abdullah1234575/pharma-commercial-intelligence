@@ -730,7 +730,7 @@ export function PharmaDashboard() {
               </div>
             </SectionShell>
 
-            <ForecastModule />
+            <ForecastModule records={records} />
 
             <SectionShell id="customers" title="Customer Insights" subtitle="Customer segmentation, top channels, prescriber proxy analysis, and retention indicators.">
               <div className="grid gap-4 xl:grid-cols-3">

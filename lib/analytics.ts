@@ -1,4 +1,6 @@
 import type { DashboardFilters, FilterOptions, KpiMetric, PharmaRecord } from "@/types/dashboard";
+import { generateComprehensiveForecasts } from "./pharma-forecasting";
+import { generateExecutiveInsights } from "./forecast-insights";
 
 export const defaultFilters: DashboardFilters = {
   year: "All",
@@ -235,7 +237,7 @@ export function buildDashboardModel(filters: DashboardFilters, sourceRecords: Ph
           accuracy && accuracy < 0.9 ? "Forecast accuracy requires review; variance is elevated." : "Forecast accuracy is stable for the selected data."
         ];
 
-  const insights =
+  let insights =
     records.length === 0
       ? [
           "No tenant dataset is loaded yet. Upload files to generate live insights.",
@@ -249,6 +251,18 @@ export function buildDashboardModel(filters: DashboardFilters, sourceRecords: Ph
           `${byRep[0]?.name ?? "Top rep"} leads rep effectiveness at ${currency.format(byRep[0]?.productivity ?? 0)} per call.`,
           `Forecast variance is ${currency.format(sales - forecast)}, with ${percent.format(Math.max(accuracy, 0))} forecast accuracy.`
         ];
+
+  if (records.length > 0) {
+    try {
+      const forecasts = generateComprehensiveForecasts(records);
+      const executiveInsights = generateExecutiveInsights(forecasts);
+      if (executiveInsights.length > 0) {
+        insights = executiveInsights.slice(0, 4).map((i) => `${i.title}: ${i.description}`);
+      }
+    } catch (e) {
+      console.error("Error generating executive insights in dashboard model:", e);
+    }
+  }
 
   return {
     records,

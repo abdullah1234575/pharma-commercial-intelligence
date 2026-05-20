@@ -3,7 +3,6 @@
  * Produces executive-level commentary and analysis
  */
 
-import type { PharmaRecord } from "@/types/dashboard";
 import type { DimensionalForecast } from "./pharma-forecasting";
 
 export interface ForecastInsight {
@@ -25,8 +24,7 @@ export function generateExecutiveInsights(
     byTerritory: DimensionalForecast[];
     byRep: DimensionalForecast[];
     overall: DimensionalForecast;
-  },
-  records: PharmaRecord[]
+  }
 ): ForecastInsight[] {
   
   const insights: ForecastInsight[] = [];
@@ -36,7 +34,7 @@ export function generateExecutiveInsights(
   insights.push(...brandInsights);
 
   // Channel-level insights
-  const channelInsights = generateChannelInsights(forecasts.byChannel, records);
+  const channelInsights = generateChannelInsights(forecasts.byChannel);
   insights.push(...channelInsights);
 
   // Territory-level insights
@@ -48,7 +46,7 @@ export function generateExecutiveInsights(
   insights.push(...repInsights);
 
   // Overall market insights
-  const marketInsights = generateMarketInsights(forecasts.overall, records);
+  const marketInsights = generateMarketInsights(forecasts.overall);
   insights.push(...marketInsights);
 
   // Sort by priority
@@ -125,8 +123,7 @@ function generateBrandInsights(brandForecasts: DimensionalForecast[]): ForecastI
  * Channel-specific insights
  */
 function generateChannelInsights(
-  channelForecasts: DimensionalForecast[],
-  records: PharmaRecord[]
+  channelForecasts: DimensionalForecast[]
 ): ForecastInsight[] {
   
   const insights: ForecastInsight[] = [];
@@ -284,8 +281,7 @@ function generateRepInsights(repForecasts: DimensionalForecast[]): ForecastInsig
  * Overall market insights
  */
 function generateMarketInsights(
-  overall: DimensionalForecast,
-  records: PharmaRecord[]
+  overall: DimensionalForecast
 ): ForecastInsight[] {
   
   const insights: ForecastInsight[] = [];

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, TrendingUp, Zap, Target } from "lucide-react";
+import { AlertTriangle, TrendingUp, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import type { ForecastInsight } from "@/types/dashboard";
 

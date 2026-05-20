@@ -7,8 +7,6 @@ import type { PharmaRecord } from "@/types/dashboard";
 import {
   selectBestForecastingMethod,
   analyzeGrowth,
-  calculateVolatility,
-  detectTrend,
   ForecastResult
 } from "./forecasting-engine";
 
@@ -158,12 +156,7 @@ export function applyPharmaBusinessLogic(
     trend: forecast.trend,
     growth: 0, // Will be calculated
     riskLevel,
-    riskFactors,
-    businessContext: {
-      isSeasonalBrand: ["Respira", "Immunex"].includes(brand || ""),
-      isTenderBusiness: channel === "Tender",
-      isChronicBrand: ["Cardiovex", "Glucofine", "Neurocil"].includes(brand || "")
-    }
+    riskFactors
   };
 }
 

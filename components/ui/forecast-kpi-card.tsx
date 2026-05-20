@@ -10,7 +10,6 @@ interface ForecastKpiCardProps {
 }
 
 export function ForecastKpiCard({ kpi, index = 0 }: ForecastKpiCardProps) {
-  const isPositive = kpi.trend === "increasing";
   const riskColor = {
     low: "border-green-200 bg-green-50",
     medium: "border-yellow-200 bg-yellow-50",

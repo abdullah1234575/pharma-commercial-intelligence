@@ -1,6 +1,6 @@
 "use client";
 
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar } from "recharts";
+import { Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from "recharts";
 
 interface ForecastTrendData {
   name: string;
@@ -121,7 +121,7 @@ export function BrandForecastChart({ data, title }: BrandForecastProps) {
               border: "1px solid #e5e7eb",
               borderRadius: "8px"
             }}
-            formatter={(value) => `$${Math.round(value / 1000)}K`}
+            formatter={(value: number) => `$${Math.round(value / 1000)}K`}
           />
           <Legend />
           <Area

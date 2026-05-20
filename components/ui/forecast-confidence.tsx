@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, AlertCircle, CheckCircle2, TrendingUp } from "lucide-react";
+import { AlertTriangle, AlertCircle, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface ConfidenceIndicatorProps {

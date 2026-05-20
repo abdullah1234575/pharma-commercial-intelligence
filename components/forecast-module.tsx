@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BarChart3, Filter, RefreshCw, Download } from "lucide-react";
-import { BrandForecastChart, GrowthForecastChart, ForecastTrendChart } from "@/components/charts/forecast-charts";
+import { RefreshCw } from "lucide-react";
+import { BrandForecastChart, GrowthForecastChart } from "@/components/charts/forecast-charts";
 import { ForecastConfidenceIndicator, RiskAlert, ScenarioAnalysis } from "@/components/ui/forecast-confidence";
 import { ForecastInsightsCard } from "@/components/ui/forecast-insights-card";
 import { SectionShell } from "@/components/ui/section-shell";
+import type { PharmaRecord, ForecastInsight } from "@/types/dashboard";
 
 interface ForecastData {
   forecasts: {
@@ -52,14 +53,7 @@ interface ForecastData {
       growth: number;
     }>;
   };
-  insights: Array<{
-    title: string;
-    description: string;
-    priority: string;
-    category: string;
-    metric: string;
-    recommendation?: string;
-  }>;
+  insights: ForecastInsight[];
   risks: {
     highRiskAreas: string[];
     mitigationStrategies: string[];
@@ -74,7 +68,11 @@ interface ForecastData {
   };
 }
 
-export function ForecastModule() {
+interface ForecastModuleProps {
+  records?: PharmaRecord[];
+}
+
+export function ForecastModule({ records = [] }: ForecastModuleProps) {
   const [data, setData] = useState<ForecastData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +82,14 @@ export function ForecastModule() {
   const fetchForecasts = useCallback(async () => {
     try {
       setRefreshing(true);
-      const response = await fetch("/api/forecast");
+      const hasRecords = records && records.length > 0;
+      
+      const response = await fetch("/api/forecast", {
+        method: hasRecords ? "POST" : "GET",
+        headers: hasRecords ? { "Content-Type": "application/json" } : undefined,
+        body: hasRecords ? JSON.stringify({ records }) : undefined,
+      });
+
       if (!response.ok) throw new Error("Failed to fetch forecasts");
       const forecastData = await response.json();
       setData(forecastData);
@@ -95,7 +100,7 @@ export function ForecastModule() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [records]);
 
   useEffect(() => {
     fetchForecasts();
@@ -113,7 +118,7 @@ export function ForecastModule() {
 
   if (error || !data) {
     return (
-      <SectionShell title="AI-Powered Forecasting Module" subtitle={error || "No data available"}>
+      <SectionShell id="forecast-error" title="AI-Powered Forecasting Module" subtitle={error || "No data available"}>
         <button
           onClick={fetchForecasts}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -134,6 +139,7 @@ export function ForecastModule() {
 
   return (
     <SectionShell
+      id="forecast"
       title="AI-Powered Forecasting Module"
       subtitle="Advanced forecasting with AI-generated insights and risk analysis"
     >
