@@ -89,3 +89,35 @@ export type TenantSession = {
   workspaceId: string;
   role: "owner" | "admin" | "analyst" | "viewer";
 };
+
+export type ForecastKPI = {
+  label: string;
+  value: string;
+  nextMonth: string;
+  nextQuarter: string;
+  ytdExpected: string;
+  confidence: string;
+  trend: "increasing" | "decreasing" | "stable";
+  riskLevel: "low" | "medium" | "high";
+};
+
+export type ForecastData = {
+  dimensionValue: string;
+  nextMonthForecast: number;
+  nextQuarterForecast: number;
+  ytdExpectedForecast: number;
+  confidence: number;
+  growth: number;
+  trend: "increasing" | "decreasing" | "stable";
+  riskLevel: "low" | "medium" | "high";
+  insights: string[];
+};
+
+export type ForecastInsight = {
+  title: string;
+  description: string;
+  priority: "critical" | "high" | "medium" | "low";
+  category: "opportunity" | "risk" | "trend" | "performance" | "market";
+  metric: string;
+  recommendation?: string;
+};

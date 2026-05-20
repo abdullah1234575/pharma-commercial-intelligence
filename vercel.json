@@ -1,0 +1,75 @@
+{
+  "version": 2,
+  "name": "pharma-commercial-intelligence",
+  "public": false,
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": {
+      "description": "Supabase project URL"
+    },
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": {
+      "description": "Supabase anonymous key"
+    }
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "nodeVersion": "18.x",
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/**/*.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/forecast",
+      "destination": "/api/forecast"
+    },
+    {
+      "source": "/api/commercial",
+      "destination": "/api/commercial"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/.*",
+      "headers": {
+        "Cache-Control": "public, max-age=3600, s-maxage=3600",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+      }
+    },
+    {
+      "src": "/api/.*",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/forecast",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ]
+    }
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/forecast",
+      "destination": "/?tab=forecast",
+      "permanent": true
+    }
+  ]
+}

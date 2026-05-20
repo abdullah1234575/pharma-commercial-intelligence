@@ -33,6 +33,7 @@ import { FilterPanel } from "@/components/ui/filter-panel";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { SectionShell } from "@/components/ui/section-shell";
 import { UploadCenter } from "@/components/upload/upload-center";
+import { ForecastModule } from "@/components/forecast-module";
 import { buildDashboardModel, buildFilterOptions, defaultFilters } from "@/lib/analytics";
 import { getSupabaseClient } from "@/lib/supabase";
 import { persistUploadToSupabase } from "@/lib/persistence";
@@ -728,6 +729,8 @@ export function PharmaDashboard() {
                 </ChartCard>
               </div>
             </SectionShell>
+
+            <ForecastModule />
 
             <SectionShell id="customers" title="Customer Insights" subtitle="Customer segmentation, top channels, prescriber proxy analysis, and retention indicators.">
               <div className="grid gap-4 xl:grid-cols-3">
