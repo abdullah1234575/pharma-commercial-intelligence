@@ -1,10 +1,10 @@
 import * as XLSX from "xlsx";
+import Papa from "papaparse";
 import { templateDefinitions, type TemplateDefinition, type TemplateColumnType } from "@/lib/template-definitions";
+import { cleanSheetRecords } from "@/lib/data-cleaning";
 import type { ColumnMapping, ParsedSheet, PharmaRecord } from "@/types/dashboard";
 
 type RawRow = Record<string, unknown>;
-
-const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const semanticDictionary: Partial<Record<keyof PharmaRecord, string[]>> = {
   year: ["year", "fiscal year", "fy"],
@@ -119,11 +119,6 @@ function mappingFromTemplate(columns: string[], template: TemplateDefinition): C
   return mapping;
 }
 
-function value(row: RawRow, mapping: ColumnMapping, key: keyof PharmaRecord) {
-  const column = mapping[key];
-  return column ? row[column] : undefined;
-}
-
 function parseNumber(input: unknown) {
   if (typeof input === "number") return Number.isFinite(input) ? input : 0;
   if (typeof input !== "string") return 0;
@@ -174,85 +169,36 @@ function validateTemplateRows(rows: RawRow[], columns: string[], template: Templ
   return errors;
 }
 
-function parseDateParts(row: RawRow, mapping: ColumnMapping) {
-  const explicitYear = parseNumber(value(row, mapping, "year"));
-  const rawMonth = value(row, mapping, "month");
-  const rawQuarter = value(row, mapping, "quarter");
-  const possibleDate = rawMonth instanceof Date ? rawMonth : new Date(String(rawMonth ?? ""));
-  const year = explicitYear || (Number.isFinite(possibleDate.getTime()) ? possibleDate.getFullYear() : new Date().getFullYear());
-  const monthIndex =
-    typeof rawMonth === "number"
-      ? Math.max(0, Math.min(11, rawMonth - 1))
-      : Number.isFinite(possibleDate.getTime())
-        ? possibleDate.getMonth()
-        : Math.max(0, monthNames.findIndex((month) => normalize(String(rawMonth ?? "")).startsWith(month.toLowerCase())));
-  const safeMonthIndex = monthIndex >= 0 ? monthIndex : 0;
-  const quarter = String(rawQuarter || `Q${Math.floor(safeMonthIndex / 3) + 1}`).toUpperCase().replace("QUARTER ", "Q");
+async function parseCsvFile(file: File): Promise<RawRow[]> {
+  const text = await file.text();
 
-  return {
-    year,
-    quarter,
-    month: monthNames[safeMonthIndex],
-    monthIndex: safeMonthIndex
-  };
-}
-
-function textValue(input: unknown, fallback: string) {
-  const valueText = String(input ?? "").trim();
-  return valueText || fallback;
-}
-
-function normalizeRows(rows: RawRow[], mapping: ColumnMapping, fileName: string, sheetName: string, uploadId?: string): PharmaRecord[] {
-  return rows.map((row, index) => {
-    const dateParts = parseDateParts(row, mapping);
-    const sales = parseNumber(value(row, mapping, "sales"));
-    const target = parseNumber(value(row, mapping, "target"));
-    const forecast = parseNumber(value(row, mapping, "forecast"));
-    const customers = parseNumber(value(row, mapping, "customers"));
-    const activeCustomers = parseNumber(value(row, mapping, "activeCustomers"));
-    const calls = parseNumber(value(row, mapping, "calls"));
-    const plannedCalls = parseNumber(value(row, mapping, "plannedCalls"));
-    const prescriptions = parseNumber(value(row, mapping, "prescriptions"));
-    const imsSales = parseNumber(value(row, mapping, "imsSales"));
-
-    const recordId = uploadId ? `${uploadId}-${fileName}-${sheetName}-${index}` : `${fileName}-${sheetName}-${index}`;
-    return {
-      id: recordId,
-      uploadId,
-      ...dateParts,
-      region: textValue(value(row, mapping, "region"), "Unassigned Region"),
-      territory: textValue(value(row, mapping, "territory"), "Unassigned Territory"),
-      productLine: textValue(value(row, mapping, "productLine"), "Portfolio"),
-      brand: textValue(value(row, mapping, "brand"), "Unassigned Product"),
-      medicalRep: textValue(value(row, mapping, "medicalRep"), "Unassigned Rep"),
-      manager: textValue(value(row, mapping, "manager"), "Unassigned Manager"),
-      customerType: textValue(value(row, mapping, "customerType"), "All Customers"),
-      channel: textValue(value(row, mapping, "channel"), "All Channels"),
-      sales,
-      target,
-      forecast,
-      units: parseNumber(value(row, mapping, "units")),
-      customers,
-      activeCustomers,
-      calls,
-      plannedCalls,
-      prescriptions,
-      priorPrescriptions: parseNumber(value(row, mapping, "priorPrescriptions")),
-      imsSales,
-      priorImsSales: parseNumber(value(row, mapping, "priorImsSales")),
-      marketSize: parseNumber(value(row, mapping, "marketSize")) || Math.max(sales, imsSales),
-      competitorA: parseNumber(value(row, mapping, "competitorA")),
-      competitorB: parseNumber(value(row, mapping, "competitorB")),
-      competitorC: parseNumber(value(row, mapping, "competitorC")),
-      margin: parseNumber(value(row, mapping, "margin"))
-    };
+  return new Promise((resolve, reject) => {
+    Papa.parse<RawRow>(text, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => header.trim(),
+      complete: (results) => {
+        if (results.errors.length) {
+          reject(new Error(results.errors.map((error) => error.message).join(" ")));
+          return;
+        }
+        resolve(results.data as RawRow[]);
+      },
+      error: reject
+    });
   });
 }
+
 
 export async function parseCommercialFile(file: File, uploadId?: string): Promise<ParsedSheet[]> {
   const extension = file.name.split(".").pop()?.toLowerCase();
   if (!extension || !["csv", "xls", "xlsx"].includes(extension)) {
     throw new Error("Only CSV, XLS, and XLSX files are supported.");
+  }
+
+  if (extension === "csv") {
+    const rows = await parseCsvFile(file);
+    return [buildParsedSheet("CSV", rows, file.name, uploadId)];
   }
 
   const buffer = await file.arrayBuffer();
@@ -261,35 +207,60 @@ export async function parseCommercialFile(file: File, uploadId?: string): Promis
   return workbook.SheetNames.map((sheetName) => {
     const worksheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json<RawRow>(worksheet, { defval: "" });
-    const columns = rows[0] ? Object.keys(rows[0]) : [];
-    const detected = detectTemplate(columns);
-    const isInstructionSheet = ["instructions", "data dictionary", "data_dictionary"].includes(normalize(sheetName));
-    const template = detected?.requiredMatches ? detected.template : undefined;
-    const templateErrors = template ? validateTemplateRows(rows, columns, template) : [];
-    const mapping = template ? mappingFromTemplate(columns, template) : detectMapping(columns);
-    const missingRequired = template ? [] : requiredKeys.filter((key) => !mapping[key]);
-    const errors = isInstructionSheet
-      ? []
-      : [
-          ...(template ? templateErrors : ["Correction required: uploaded sheet does not match a standardized Synaptic Group template. Download a template and keep the required headers unchanged."]),
-          ...(!template && missingRequired.length ? [`Missing mapped fields: ${missingRequired.join(", ")}.`] : [])
-        ];
-    const records = errors.length || isInstructionSheet ? [] : normalizeRows(rows, mapping, file.name, sheetName, uploadId);
-
-    return {
-      fileName: file.name,
-      sheetName,
-      templateType: template?.type,
-      rowCount: rows.length,
-      mapping,
-      records,
-      warnings: [
-        ...(isInstructionSheet ? ["Reference sheet skipped. Upload processing uses Data_Template sheets only."] : []),
-        ...(rows.length === 0 ? ["Sheet has no data rows."] : []),
-        ...(template ? [`Recognized ${template.label} template. Automatic mapping applied.`] : []),
-        ...(mapping.confidence < 70 ? ["Low mapping confidence. Review source column names for clearer BI semantics."] : [])
-      ],
-      errors
-    };
+    return buildParsedSheet(sheetName, rows, file.name, uploadId);
   });
+}
+
+function buildParsedSheet(sheetName: string, rows: RawRow[], fileName: string, uploadId?: string): ParsedSheet {
+  const columns = rows[0] ? Object.keys(rows[0]) : [];
+  const detected = detectTemplate(columns);
+  const isInstructionSheet = ["instructions", "data dictionary", "data_dictionary"].includes(normalize(sheetName));
+  const template = detected?.requiredMatches ? detected.template : undefined;
+  const templateErrors = template ? validateTemplateRows(rows, columns, template) : [];
+  const mapping = template ? mappingFromTemplate(columns, template) : detectMapping(columns);
+  const missingRequired = template ? [] : requiredKeys.filter((key) => !mapping[key]);
+  const errors = isInstructionSheet
+    ? []
+    : [
+        ...(template ? templateErrors : ["Correction required: uploaded sheet does not match a standardized Synaptic Group template. Download a template and keep the required headers unchanged."]),
+        ...(!template && missingRequired.length ? [`Missing mapped fields: ${missingRequired.join(", ")}.`] : [])
+      ];
+
+  const cleaned = errors.length || isInstructionSheet ? {
+    records: [],
+    qualityReport: undefined,
+    columnPreview: [],
+    correctedRows: 0,
+    invalidRows: 0,
+    previewRows: [],
+    rowIssues: [],
+    summaryCounts: { totalRows: rows.length, importedRows: 0, fixedRows: 0, warningRows: 0, rejectedRows: 0 }
+  } : cleanSheetRecords(rows, mapping, fileName, sheetName, uploadId);
+
+  return {
+    fileName: fileName,
+    sheetName,
+    templateType: template?.type,
+    rowCount: rows.length,
+    mapping,
+    records: cleaned.records,
+    warnings: [
+      ...(isInstructionSheet ? ["Reference sheet skipped. Upload processing uses Data_Template sheets only."] : []),
+      ...(rows.length === 0 ? ["Sheet has no data rows."] : []),
+      ...(template ? [`Recognized ${template.label} template. Automatic mapping applied.`] : []),
+      ...(mapping.confidence < 70 ? ["Low mapping confidence. Review source column names for clearer BI semantics."] : []),
+      ...(cleaned.qualityReport?.duplicateRows ? [`${cleaned.qualityReport.duplicateRows} duplicate groups detected.`] : []),
+      ...(cleaned.qualityReport?.outliers ? [`${cleaned.qualityReport.outliers} sales outliers detected.`] : []),
+      ...(cleaned.qualityReport?.forecastAnomalies ? [`${cleaned.qualityReport.forecastAnomalies} forecast anomalies found.`] : []),
+      ...(cleaned.qualityReport?.missingValues ? [`${cleaned.qualityReport.missingValues} critical validation issues found.`] : [])
+    ],
+    errors,
+    columnPreview: cleaned.columnPreview,
+    qualityReport: cleaned.qualityReport,
+    previewRows: cleaned.previewRows,
+    rowIssues: cleaned.rowIssues,
+    summaryCounts: cleaned.summaryCounts,
+    correctedRows: cleaned.correctedRows,
+    invalidRows: cleaned.invalidRows
+  };
 }

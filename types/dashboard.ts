@@ -12,6 +12,54 @@ export type DashboardFilters = {
   channel: string;
 };
 
+export type DetectedType = "date" | "currency" | "percentage" | "integer" | "number" | "text" | "unknown";
+
+export type ColumnPreview = {
+  originalName: string;
+  detectedType: DetectedType;
+  cleanedType: DetectedType;
+  sampleValues: string[];
+  correctionCount: number;
+  confidence: number;
+};
+
+export type PreviewRow = {
+  rowNumber: number;
+  original: Record<string, string>;
+  cleaned: Record<string, string>;
+  status: "ok" | "warning" | "critical";
+};
+
+export type ValidationIssue = {
+  rowId: string;
+  rowIndex: number;
+  field: string;
+  issue: string;
+  severity: "warning" | "critical";
+  originalValue?: string;
+  expectedType?: string;
+  suggestedFix?: string;
+};
+
+export type ImportSummary = {
+  totalRows: number;
+  importedRows: number;
+  fixedRows: number;
+  warningRows: number;
+  rejectedRows: number;
+};
+
+export type DataQualityReport = {
+  missingValues: number;
+  duplicateRows: number;
+  invalidDates: number;
+  negativeSales: number;
+  outliers: number;
+  forecastAnomalies: number;
+  issues: ValidationIssue[];
+  summary: string[];
+};
+
 export type PharmaRecord = {
   id: string;
   uploadId?: string;
@@ -70,6 +118,13 @@ export type ParsedSheet = {
   records: PharmaRecord[];
   warnings: string[];
   errors: string[];
+  columnPreview?: ColumnPreview[];
+  qualityReport?: DataQualityReport;
+  previewRows?: PreviewRow[];
+  rowIssues?: ValidationIssue[];
+  summaryCounts?: ImportSummary;
+  correctedRows?: number;
+  invalidRows?: number;
 };
 
 export type UploadHistoryItem = {

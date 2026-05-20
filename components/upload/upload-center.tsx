@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 import { AlertCircle, CheckCircle2, FileSpreadsheet, RotateCw, Trash2 } from "lucide-react";
 import { parseCommercialFile } from "@/lib/data-mapping";
 import { templateDefinitions } from "@/lib/template-definitions";
+import { ImportPreviewModal } from "@/components/upload/import-preview-modal";
 import type { ParsedSheet, PharmaRecord, UploadHistoryItem } from "@/types/dashboard";
 
 type UploadCenterProps = {
@@ -16,8 +18,12 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
   const inputRef = useRef<HTMLInputElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState("Ready to upload");
   const [lastFiles, setLastFiles] = useState<File[]>([]);
   const [sheets, setSheets] = useState<ParsedSheet[]>([]);
+  const [pendingItem, setPendingItem] = useState<UploadHistoryItem | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [autoFixApplied, setAutoFixApplied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [displayHistory, setDisplayHistory] = useState<UploadHistoryItem[]>(history);
 
@@ -36,6 +42,7 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
 
     const uploadId = crypto.randomUUID();
     setIsProcessing(true);
+    setStage("Cleaning and mapping uploaded data...");
     setProgress(8);
     setError(null);
     setLastFiles(filesToImport);
@@ -44,13 +51,16 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
     try {
       const parsed: ParsedSheet[] = [];
       for (const [index, file] of filesToImport.entries()) {
-        setProgress(Math.round(((index + 0.35) / filesToImport.length) * 100));
+        setStage(`Processing ${file.name} (${index + 1}/${filesToImport.length})`);
+        setProgress(Math.round(((index + 0.25) / filesToImport.length) * 100));
         parsed.push(...(await parseCommercialFile(file, uploadId)));
-        setProgress(Math.round(((index + 1) / filesToImport.length) * 100));
+        setProgress(Math.round(((index + 0.85) / filesToImport.length) * 100));
       }
+      setStage("Validating pharma templates and quality rules...");
+      setProgress(95);
 
-      const blockingErrors = parsed.flatMap((sheet) => sheet.errors);
-      const records = blockingErrors.length ? [] : parsed.flatMap((sheet) => sheet.records);
+      const records = parsed.flatMap((sheet) => sheet.records);
+      const summaryErrors = parsed.flatMap((sheet) => sheet.errors);
       const item: UploadHistoryItem = {
         id: uploadId,
         fileName: files.map((file) => file.name).join(", "),
@@ -59,11 +69,16 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
         rows: records.length,
         status: records.length > 0 ? "processed" : "failed",
         createdAt: new Date().toISOString(),
-        message: blockingErrors.length ? "Template validation failed. Review correction guidance." : "Upload processed successfully."
+        message: records.length > 0 ? "Upload ready for final import." : "Upload contains no imported rows. Review validation preview."
       };
 
       setSheets(parsed);
-      onProcessed(records, parsed, item);
+      setPendingItem(item);
+      setPreviewOpen(true);
+      setAutoFixApplied(false);
+      if (summaryErrors.length) {
+        setStage("Review validation details before final import...");
+      }
     } catch (uploadError) {
       const message = uploadError instanceof Error ? uploadError.message : "Upload failed.";
       setError(message);
@@ -79,6 +94,7 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
       });
     } finally {
       setIsProcessing(false);
+      setStage("Upload complete");
       setProgress(100);
     }
   }
@@ -91,6 +107,49 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
     setDisplayHistory((current) => current.filter((historyItem) => historyItem.id !== item.id));
     setSheets([]);
     onDelete?.(item);
+  }
+
+  function handleConfirmImport() {
+    if (!pendingItem) return;
+    const records = sheets.flatMap((sheet) => sheet.records);
+    setPreviewOpen(false);
+    setStage("Import complete");
+    onProcessed(records, sheets, pendingItem);
+  }
+
+  function handleCancelPreview() {
+    setPreviewOpen(false);
+    setStage("Upload preview canceled");
+    setSheets([]);
+    setPendingItem(null);
+  }
+
+  function handleAutoFix() {
+    setAutoFixApplied(true);
+    setStage("Auto fix suggestions applied");
+  }
+
+  function downloadErrorReport() {
+    const errorRows = sheets.flatMap((sheet) =>
+      sheet.rowIssues?.map((issue) => ({
+        fileName: sheet.fileName,
+        sheetName: sheet.sheetName,
+        rowNumber: issue.rowIndex + 2,
+        field: issue.field,
+        originalValue: issue.originalValue ?? "",
+        expectedType: issue.expectedType ?? "",
+        suggestedFix: issue.suggestedFix ?? "",
+        issue: issue.issue,
+        severity: issue.severity
+      })) ?? []
+    );
+
+    if (!errorRows.length) return;
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(errorRows);
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Import_Errors");
+    XLSX.writeFile(workbook, "errors_report.xlsx");
   }
 
   return (
@@ -137,7 +196,10 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
           {isProcessing || progress > 0 ? (
             <div className="rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--panel))] p-3 text-sm text-[rgb(var(--text))]">
               <div className="flex items-center justify-between gap-3">
-                <p className="font-medium text-[rgb(var(--text))]">{isProcessing ? "Processing upload" : "Last upload"}</p>
+                <div>
+                  <p className="font-medium text-[rgb(var(--text))]">{isProcessing ? "Processing upload" : "Last upload"}</p>
+                  <p className="mt-1 text-xs text-[rgb(var(--muted))]">{stage}</p>
+                </div>
                 <span className="text-xs text-[rgb(var(--muted))]">{progress}%</span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-[rgb(var(--panel-soft))]">
@@ -165,6 +227,33 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
         </div>
       ) : null}
 
+      <ImportPreviewModal
+        open={previewOpen}
+        sheets={sheets}
+        autoFixApplied={autoFixApplied}
+        onClose={handleCancelPreview}
+        onConfirm={handleConfirmImport}
+        onAutoFix={handleAutoFix}
+        onExportErrors={downloadErrorReport}
+      />
+
+      {sheets.length ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-5">
+          {[
+            ["Total", sheets.reduce((sum, sheet) => sum + (sheet.summaryCounts?.totalRows ?? 0), 0)],
+            ["Imported", sheets.reduce((sum, sheet) => sum + sheet.records.length, 0)],
+            ["Fixed", sheets.reduce((sum, sheet) => sum + (sheet.summaryCounts?.fixedRows ?? 0), 0)],
+            ["Warnings", sheets.reduce((sum, sheet) => sum + (sheet.summaryCounts?.warningRows ?? 0), 0)],
+            ["Rejected", sheets.reduce((sum, sheet) => sum + (sheet.summaryCounts?.rejectedRows ?? 0), 0)]
+          ].map(([label, value]) => (
+            <div key={label as string} className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--panel-soft))] p-3 text-sm text-[rgb(var(--muted))]">
+              <p className="text-[rgb(var(--text))] font-semibold">{label}</p>
+              <p className="mt-2 text-2xl font-semibold text-[rgb(var(--text))]">{value}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       {sheets.length ? (
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {sheets.map((sheet) => (
@@ -180,6 +269,31 @@ export function UploadCenter({ history, onProcessed, onDelete }: UploadCenterPro
               {sheet.errors.map((sheetError) => (
                 <p key={sheetError} className="mt-2 text-xs leading-5 text-danger">{sheetError}</p>
               ))}
+              {sheet.qualityReport ? (
+                <div className="mt-3 rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] p-3 text-[rgb(var(--muted))]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ocean">Data quality summary</p>
+                  <p className="mt-2 text-xs">{sheet.qualityReport.summary.join(" · ")}</p>
+                </div>
+              ) : null}
+              {(sheet.correctedRows || sheet.invalidRows) ? (
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-[rgb(var(--muted))]">
+                  {sheet.correctedRows ? <span className="rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-2 py-1">{sheet.correctedRows} corrections</span> : null}
+                  {sheet.invalidRows ? <span className="rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] px-2 py-1">{sheet.invalidRows} invalid rows</span> : null}
+                </div>
+              ) : null}
+              {sheet.columnPreview?.length ? (
+                <div className="mt-3 rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--panel))] p-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ocean">Sample field mapping</p>
+                  <div className="mt-2 space-y-2 text-xs text-[rgb(var(--muted))]">
+                    {sheet.columnPreview.slice(0, 3).map((preview) => (
+                      <div key={preview.originalName} className="flex flex-col gap-1">
+                        <span className="font-semibold text-[rgb(var(--text))]">{preview.originalName}</span>
+                        <span>{preview.detectedType} → {preview.cleanedType} ({preview.confidence}% confidence)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
