@@ -48,7 +48,7 @@ export function PharmaDashboard() {
   const supabase = useMemo(() => getSupabaseClient(), []);
   const [filters, setFilters] = useState<DashboardFilters>(defaultFilters);
   const [darkMode, setDarkMode] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [lastRefresh, setLastRefresh] = useState<string>("");
   const [records, setRecords] = useState<PharmaRecord[]>([]);
   const [uploadHistory, setUploadHistory] = useState<UploadHistoryItem[]>([]);
   const [exportCount, setExportCount] = useState<number>(0);
@@ -62,6 +62,10 @@ export function PharmaDashboard() {
   const isVerified = Boolean(authUser?.emailConfirmedAt);
   const model = useMemo(() => buildDashboardModel(filters, records), [filters, records]);
   const filterOptions = useMemo(() => buildFilterOptions(records), [records]);
+
+  useEffect(() => {
+    setLastRefresh(new Date().toISOString());
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -241,7 +245,7 @@ export function PharmaDashboard() {
     const summaryRows = [
       { metric: "Summary", value: "Commercial intelligence dashboard export" },
       { metric: "Total records", value: records.length },
-      { metric: "Last refreshed", value: lastRefresh.toISOString() },
+      { metric: "Last refreshed", value: lastRefresh ? new Date(lastRefresh).toISOString() : "Pending" },
       { metric: "Verified user", value: isVerified ? "Yes" : "No" },
       { metric: "Email", value: authUser?.email ?? "Unknown" }
     ];
@@ -342,7 +346,7 @@ export function PharmaDashboard() {
           <Topbar
             darkMode={darkMode}
             onToggleDark={() => setDarkMode((value) => !value)}
-            onRefresh={() => setLastRefresh(new Date())}
+            onRefresh={() => setLastRefresh(new Date().toISOString())}
             lastRefresh={lastRefresh}
             onExportExcel={exportExcel}
             onExportPdf={exportPdf}

@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <Script id="microsoft-clarity" strategy="beforeInteractive" src="https://www.clarity.ms/tag/wu7dz0nxre" />
+        <Script id="microsoft-clarity" strategy="lazyOnload" src="https://www.clarity.ms/tag/wu7dz0nxre" />
       </head>
       <body>
         {children}
